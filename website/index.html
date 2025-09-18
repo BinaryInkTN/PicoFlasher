@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PicoFlasher - Easy ISO to USB Flashing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2196F3',
+                        dark: '#121212',
+                        darker: '#0A0A0A',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #0A0A0A 0%, #121212 50%, #1e3a8a 100%);
+        }
+        .hero-pattern {
+            background-image: radial-gradient(circle at 25% 25%, rgba(33, 150, 243, 0.1) 0%, transparent 55%);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(33, 150, 243, 0.4);
+        }
+        .screenshot-placeholder {
+            background: linear-gradient(45deg, #1e3a8a 0%, #2196F3 100%);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-darker text-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-dark bg-opacity-90 backdrop-blur-sm py-4 px-6 sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+           
+                <span class="text-xl font-bold">Pico<span class="text-primary">Flasher</span></span>
+            </div>
+            
+            <div class="hidden md:flex space-x-8">
+                <a href="#features" class="hover:text-primary transition">Features</a>
+                <a href="#screenshots" class="hover:text-primary transition">Screenshots</a>
+                <a href="#faq" class="hover:text-primary transition">FAQ</a>
+            </div>
+            
+            <div class="md:hidden">
+                <button id="menu-toggle" class="text-gray-300 hover:text-white">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 px-6">
+            <div class="flex flex-col space-y-4">
+                <a href="#features" class="hover:text-primary transition">Features</a>
+                <a href="#download" class="hover:text-primary transition">Download</a>
+                <a href="#screenshots" class="hover:text-primary transition">Screenshots</a>
+                <a href="#faq" class="hover:text-primary transition">FAQ</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg hero-pattern py-20 px-6">
+        <div class="container mx-auto flex flex-col md:flex-row items-center">
+            <div class="md:w-1/2 mb-10 md:mb-0">
+                <h1 class="text-4xl md:text-5xl font-bold mb-6">Flash ISO Files to USB with <span class="text-primary">Ease</span></h1>
+                <p class="text-xl text-gray-300 mb-8">PicoFlasher is a simple, fast, and reliable tool for creating bootable USB drives from ISO images. No technical knowledge required.</p>
+                
+                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                    <a href="https://github.com/BinaryInkTN/PicoFlasher/releases" class="bg-primary hover:bg-blue-400 text-white font-bold py-3 px-8 rounded-lg transition duration-300 flex items-center justify-center">
+                        <i class="fas fa-download mr-2"></i> Download Now
+                    </a>
+                    <a href="https://github.com/BinaryInkTN/PicoFlasher" class="border border-primary text-primary hover:bg-primary hover:text-white font-bold py-3 px-8 rounded-lg transition duration-300 flex items-center justify-center">
+                        <i class="fab fa-github mr-2"></i> Visit Github
+                    </a>
+                </div>
+                
+                <div class="mt-8 flex items-center text-gray-400">
+                    <i class="fas fa-shield-alt mr-2"></i>
+                    <span>Open Source • Safe • No Ads</span>
+                </div>
+            </div>
+            
+            <div class="md:w-1/2 flex justify-center">
+                        <img src="preview_done.png" alt="PicoFlasher main window showing device selection and flashing options in a clean, modern interface. The environment is a dark-themed application window with blue highlights, giving a calm and focused tone. Text visible: Select USB Device, Select ISO File, Flash, Cancel." class="w-90 max-w-full h-auto object-contain rounded-lg shadow-lg">
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 px-6 bg-dark">
+        <div class="container mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-4">Why Choose <span class="text-primary">PicoFlasher</span></h2>
+            <p class="text-gray-400 text-center max-w-2xl mx-auto mb-16">Designed with simplicity and efficiency in mind, PicoFlasher makes creating bootable USB drives a breeze.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="feature-card bg-darker p-8 rounded-xl transition duration-300">
+                    <div class="w-14 h-14 rounded-lg bg-primary bg-opacity-20 flex items-center justify-center mb-6">
+                        <i class="fas fa-bolt text-primary text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Lightning Fast</h3>
+                    <p class="text-gray-400">Small footprint, big performance.</p>
+                </div>
+                
+                <div class="feature-card bg-darker p-8 rounded-xl transition duration-300">
+                    <div class="w-14 h-14 rounded-lg bg-primary bg-opacity-20 flex items-center justify-center mb-6">
+                        <i class="fas fa-shield-alt text-primary text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Safe & Secure</h3>
+                    <p class="text-gray-400">Built-in safety checks prevent accidental formatting of system drives. Your data is safe.</p>
+                </div>
+                
+                <div class="feature-card bg-darker p-8 rounded-xl transition duration-300">
+                    <div class="w-14 h-14 rounded-lg bg-primary bg-opacity-20 flex items-center justify-center mb-6">
+                        <i class="fas fa-plug text-primary text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Hardware Detection</h3>
+                    <p class="text-gray-400">Automatically detects connected USB devices and displays detailed information about each one.</p>
+                </div>
+                
+                <div class="feature-card bg-darker p-8 rounded-xl transition duration-300">
+                    <div class="w-14 h-14 rounded-lg bg-primary bg-opacity-20 flex items-center justify-center mb-6">
+                        <i class="fas fa-tachometer-alt text-primary text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Real Progress</h3>
+                    <p class="text-gray-400">Live progress tracking with accurate estimates so you know exactly how long the process will take.</p>
+                </div>
+                
+                <div class="feature-card bg-darker p-8 rounded-xl transition duration-300">
+                    <div class="w-14 h-14 rounded-lg bg-primary bg-opacity-20 flex items-center justify-center mb-6">
+                        <i class="fab fa-linux text-primary text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Linux & Windows ISOs</h3>
+                    <p class="text-gray-400">Works with all major Linux distributions and Windows ISO files for maximum compatibility.</p>
+                </div>
+                
+                <div class="feature-card bg-darker p-8 rounded-xl transition duration-300">
+                    <div class="w-14 h-14 rounded-lg bg-primary bg-opacity-20 flex items-center justify-center mb-6">
+                        <i class="fas fa-code text-primary text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Open Source</h3>
+                    <p class="text-gray-400">Completely open source software. Transparency and community-driven improvements.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section id="screenshots" class="py-20 px-6 gradient-bg">
+        <div class="container mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-4">Application <span class="text-primary">Screenshots</span></h2>
+            <p class="text-gray-400 text-center max-w-2xl mx-auto mb-16">See how PicoFlasher makes the process of creating bootable USB drives simple and straightforward.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                <div class="bg-dark p-6 rounded-xl">
+                    <img src="preview_device_selection.png" alt="PicoFlasher main window showing device selection and flashing options in a clean, modern interface. The environment is a dark-themed application window with blue highlights, giving a calm and focused tone. Text visible: Select USB Device, Select ISO File, Flash, Cancel." class="screenshot
+                    <p class="text-gray-400 text-center mt-4">Clean and intuitive main window with device selection</p>
+                </div>
+                
+                <div class="bg-dark p-6 rounded-xl">
+                                      <img src="preview_done.png" alt="PicoFlasher main window showing device selection and flashing options in a clean, modern interface. The environment is a dark-themed application window with blue highlights, giving a calm and focused tone. Text visible: Select USB Device, Select ISO File, Flash, Cancel." class="screenshot
+
+                    <p class="text-gray-400 text-center mt-4">Real-time progress tracking during the flashing process</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- FAQ Section -->
+    <section id="faq" class="py-20 px-6 bg-darker ">
+        <div class="container mx-auto max-w-4xl">
+            <h2 class="text-3xl font-bold text-center mb-4">Frequently Asked <span class="text-primary">Questions</span></h2>
+            <p class="text-gray-400 text-center max-w-2xl mx-auto mb-16">Find answers to common questions about PicoFlasher.</p>
+            
+            <div class="space-y-6">
+                <div class="bg-dark bg-opacity-50 p-6 rounded-xl">
+                    <h3 class="text-xl font-bold mb-3 text-primary">Is PicoFlasher completely free?</h3>
+                    <p class="text-gray-300">Yes, PicoFlasher is completely free and open source. There are no hidden fees, subscriptions, or premium features.</p>
+                </div>
+                
+                <div class="bg-dark bg-opacity-50 p-6 rounded-xl">
+                    <h3 class="text-xl font-bold mb-3 text-primary">Which operating systems are supported?</h3>
+                    <p class="text-gray-300">PicoFlasher works on Windows 10/11, most Linux distributions (Ubuntu, Fedora, Debian, etc.).</p>
+                </div>
+                
+                <div class="bg-dark bg-opacity-50 p-6 rounded-xl">
+                    <h3 class="text-xl font-bold mb-3 text-primary">Can I use PicoFlasher for Windows ISO files?</h3>
+                    <p class="text-gray-300">Yes, PicoFlasher supports both Linux and Windows ISO files. It works with most standard ISO images.</p>
+                </div>
+                
+                <div class="bg-dark bg-opacity-50 p-6 rounded-xl">
+                    <h3 class="text-xl font-bold mb-3 text-primary">How is this different from other flashing tools?</h3>
+                    <p class="text-gray-300">PicoFlasher focuses on simplicity, safety, and speed. It has a clean interface, prevents accidental data loss, and has a small footprint.</p>
+                </div>
+                
+                <div class="bg-dark bg-opacity-50 p-6 rounded-xl">
+                    <h3 class="text-xl font-bold mb-3 text-primary">Is internet connection required?</h3>
+                    <p class="text-gray-300">No, once downloaded, PicoFlasher works completely offline. Internet is only needed for downloading the application.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-darker py-12 px-6 border-t border-gray-800">
+        <div class="container mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center space-x-2 mb-6 md:mb-0">
+                    <div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+                        <i class="fas fa-bolt text-white"></i>
+                    </div>
+                    <span class="text-xl font-bold">Pico<span class="text-primary">Flasher</span></span>
+                </div>
+              
+                
+                <div class="text-gray-400 text-sm">
+                    <p>© 2025 PicoFlasher. Made with <i class="fas fa-heart text-red-500"></i> by binaryink.dev</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('menu-toggle').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+        
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                    
+                    document.getElementById('mobile-menu').classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
