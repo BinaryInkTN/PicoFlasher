@@ -8,6 +8,7 @@ import threading
 from typing import List, Dict, Optional
 from dataclasses import dataclass
 import hashlib
+import stat
 
 
 @dataclass
@@ -152,10 +153,11 @@ class ISOFlasherAPI:
         devices = []
         try:
             for item in os.listdir('/dev'):
-                if (item.startswith('sd') or item.startswith('nvme') or 
-                    item.startswith('mmcblk')) and not any(char in item for char in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']):
-                    devices.append(f"/dev/{item}")
-        except:
+                path = os.path.join('/dev',item)
+                if (os.path.exists(path) and stat.S_ISBLK(os.stat(path).st_mode)):
+                    devices.append(path)
+        except Exception as e:
+            self._log(e)
             pass
         return devices
     
@@ -376,3 +378,10 @@ class ISOFlasherAPI:
             subprocess.run(['sync'], check=True)
         except:
             pass
+
+        
+if __name__ == '__main__': 
+    flasher = ISOFlasherAPI(verbose=True)
+    dev = flasher._get_all_block_devices()
+    dev = flasher.list_usb_devices()
+    print(dev)
