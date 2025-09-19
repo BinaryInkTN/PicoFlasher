@@ -686,40 +686,97 @@ class SafeISOFlasher:
             input_size = os.path.getsize(input_file)
             bytes_written = 0
             
-            with open(input_file, 'rb') as src, open(output_device, 'wb') as dest:
-                while not self._stop_progress.is_set():
-                    chunk = src.read(block_size)
-                    if not chunk:
-                        break
+            
+            if not os.access(output_device, os.W_OK):
+                if self.use_sudo:
                     
                     try:
-                        dest.write(chunk)
-                        bytes_written += len(chunk)
-                        self._bytes_written = bytes_written
-                        
-                        
-                        if bytes_written % (10 * 1024 * 1024) == 0:  
-                            progress = 10 + (bytes_written / input_size) * 80
-                            self._progress_update(min(progress, 90), 100)
-                            
-                    except IOError as e:
-                        if e.errno == 28:  
-                            result["message"] = "No space left on device"
-                            return result
-                        raise
-                
-                
-                if self._stop_progress.is_set():
-                    result["message"] = "Write operation cancelled"
+                        test_cmd = ["sudo", "test", "-w", output_device]
+                        subprocess.run(test_cmd, check=True, capture_output=True)
+                    except subprocess.CalledProcessError:
+                        result["message"] = f"No write permission for device: {output_device}"
+                        return result
+                else:
+                    result["message"] = f"No write permission for device: {output_device}"
                     return result
+            
+            with open(input_file, 'rb') as src:
                 
+                if self.use_sudo:
+                    
+                    dd_process = subprocess.Popen(
+                        ["sudo", "dd", f"if={input_file}", f"of={output_device}", 
+                         f"bs={block_size}", "status=none"],
+                        stderr=subprocess.PIPE,
+                        stdout=subprocess.PIPE
+                    )
+                    
+                    
+                    while dd_process.poll() is None and not self._stop_progress.is_set():
+                        time.sleep(0.5)
+                        
+                        try:
+                            current_pos = src.tell()
+                            self._bytes_written = current_pos
+                            progress = 10 + (current_pos / input_size) * 80
+                            self._progress_update(min(progress, 90), 100)
+                        except:
+                            pass
+                    
+                    if self._stop_progress.is_set():
+                        dd_process.terminate()
+                        try:
+                            dd_process.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            dd_process.kill()
+                        result["message"] = "Write operation cancelled"
+                        return result
+                    
+                    
+                    if dd_process.returncode != 0:
+                        stderr = dd_process.stderr.read().decode() if dd_process.stderr else "Unknown error"
+                        result["message"] = f"dd command failed: {stderr}"
+                        return result
+                    
+                    result["bytes_written"] = input_size
+                    result["success"] = True
+                else:
+                    
+                    with open(output_device, 'wb') as dest:
+                        while not self._stop_progress.is_set():
+                            chunk = src.read(block_size)
+                            if not chunk:
+                                break
+                            
+                            try:
+                                dest.write(chunk)
+                                bytes_written += len(chunk)
+                                self._bytes_written = bytes_written
+                                
+                                
+                                if bytes_written % (10 * 1024 * 1024) == 0:  
+                                    progress = 10 + (bytes_written / input_size) * 80
+                                    self._progress_update(min(progress, 90), 100)
+                                    
+                            except IOError as e:
+                                if e.errno == 28:  
+                                    result["message"] = "No space left on device"
+                                    return result
+                                raise
+                        
+                        
+                        if self._stop_progress.is_set():
+                            result["message"] = "Write operation cancelled"
+                            return result
+                        
+                        
+                        dest.flush()
+                        os.fsync(dest.fileno())
+                        
+                        result["bytes_written"] = bytes_written
+                        result["success"] = True
                 
-                dest.flush()
-                os.fsync(dest.fileno())
-                
-                result["bytes_written"] = bytes_written
-                result["success"] = True
-                self._log(f"Write completed: {bytes_written} bytes written")
+                self._log(f"Write completed: {result['bytes_written']} bytes written")
                 
         except PermissionError:
             result["message"] = "Permission denied for writing to device"
@@ -765,71 +822,118 @@ class SafeISOFlasher:
             last_reported = 0
             
             device_size = self._get_device_size(device_path)
-            print(device_size)
             if device_size < iso_size:
                 self._log(f"Device smaller than ISO! (Device={device_size}, ISO={iso_size})", "ERROR")
                 return False
             
-            with open(iso_path, "rb") as iso_file, open(device_path, "rb") as device_file:
+            
+            if self.use_sudo and not os.access(device_path, os.R_OK):
+                
                 iso_hash = hashlib.sha256()
                 device_hash = hashlib.sha256()
-        
-                while bytes_compared < iso_size:
                 
-                    
-                    bytes_to_read = min(block_size, iso_size - bytes_compared)
-                    iso_chunk = iso_file.read(bytes_to_read)
-                    device_chunk = device_file.read(bytes_to_read)
-                    
-                    if not iso_chunk or not device_chunk:
-                        break
-                    
-                    if iso_chunk != device_chunk:
-                        
-                        for i in range(len(iso_chunk)):
-                            if i >= len(device_chunk) or iso_chunk[i] != device_chunk[i]:
-                                position = bytes_compared + i
-                                self._log(
-                                    f"Data mismatch at byte {position}: "
-                                    f"ISO=0x{iso_chunk[i]:02x}, Device=0x{device_chunk[i]:02x}",
-                                    "ERROR"
-                                )
-                                return False
-                        self._log("Data mismatch detected (different chunk sizes).", "ERROR")
-                        return False
-                    
-                    iso_hash.update(iso_chunk)
-                    device_hash.update(device_chunk)
-                    bytes_compared += len(iso_chunk)
-                    
-                    
-                    if bytes_compared - last_reported >= 10 * 1024 * 1024:
-                        progress = 95 + (bytes_compared / iso_size) * 5
-                        self._progress_update(min(progress, 100), 100)
-                        last_reported = bytes_compared
+                
+                with open(iso_path, "rb") as iso_file:
+                    while True:
+                        chunk = iso_file.read(block_size)
+                        if not chunk:
+                            break
+                        iso_hash.update(chunk)
+                
+                
+                dd_process = subprocess.Popen(
+                    ["sudo", "dd", f"if={device_path}", "bs=4k", "count=1", f"skip={iso_size//4096}", "status=none"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                stdout, stderr = dd_process.communicate()
+                
+                if dd_process.returncode != 0:
+                    self._log(f"Failed to read device for verification: {stderr.decode()}", "ERROR")
+                    return False
+                
+                
                 
                 iso_final = iso_hash.hexdigest()
-                device_final = device_hash.hexdigest()
                 
-                self._log(f"ISO checksum: {iso_final}")
-                self._log(f"Device checksum: {device_final}")
                 
-                if iso_final != device_final:
-                    self._log(
-                        f"Verification failed: checksum mismatch "
-                        f"(ISO: {iso_final[:16]}..., Device: {device_final[:16]}...)", "ERROR"
-                    )
+                dd_process = subprocess.Popen(
+                    ["sudo", "dd", f"if={device_path}", f"bs={block_size}", f"count={iso_size//block_size}", "status=none"],
+                    stdout=subprocess.PIPE
+                )
+                sha_process = subprocess.Popen(
+                    ["sha256sum"],
+                    stdin=dd_process.stdout,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                dd_process.stdout.close()
+                stdout, stderr = sha_process.communicate()
+                
+                if sha_process.returncode != 0:
+                    self._log(f"Failed to calculate device checksum: {stderr.decode()}", "ERROR")
                     return False
                 
-                if expected_checksum and device_final != expected_checksum:
-                    self._log(
-                        f"Verification failed: expected checksum mismatch "
-                        f"(Expected: {expected_checksum[:16]}..., Got: {device_final[:16]}...)", "ERROR"
-                    )
-                    return False
+                device_final = stdout.decode().split()[0]
                 
-                self._log("Verification passed!")
-                return True
+            else:
+                
+                with open(iso_path, "rb") as iso_file, open(device_path, "rb") as device_file:
+                    iso_hash = hashlib.sha256()
+                    device_hash = hashlib.sha256()
+            
+                    while bytes_compared < iso_size:
+                        bytes_to_read = min(block_size, iso_size - bytes_compared)
+                        iso_chunk = iso_file.read(bytes_to_read)
+                        device_chunk = device_file.read(bytes_to_read)
+                        
+                        if not iso_chunk or not device_chunk:
+                            break
+                        
+                        if iso_chunk != device_chunk:
+                            for i in range(len(iso_chunk)):
+                                if i >= len(device_chunk) or iso_chunk[i] != device_chunk[i]:
+                                    position = bytes_compared + i
+                                    self._log(
+                                        f"Data mismatch at byte {position}: "
+                                        f"ISO=0x{iso_chunk[i]:02x}, Device=0x{device_chunk[i]:02x}",
+                                        "ERROR"
+                                    )
+                                    return False
+                            self._log("Data mismatch detected (different chunk sizes).", "ERROR")
+                            return False
+                        
+                        iso_hash.update(iso_chunk)
+                        device_hash.update(device_chunk)
+                        bytes_compared += len(iso_chunk)
+                        
+                        if bytes_compared - last_reported >= 10 * 1024 * 1024:
+                            progress = 95 + (bytes_compared / iso_size) * 5
+                            self._progress_update(min(progress, 100), 100)
+                            last_reported = bytes_compared
+                    
+                    iso_final = iso_hash.hexdigest()
+                    device_final = device_hash.hexdigest()
+            
+            self._log(f"ISO checksum: {iso_final}")
+            self._log(f"Device checksum: {device_final}")
+            
+            if iso_final != device_final:
+                self._log(
+                    f"Verification failed: checksum mismatch "
+                    f"(ISO: {iso_final[:16]}..., Device: {device_final[:16]}...)", "ERROR"
+                )
+                return False
+            
+            if expected_checksum and device_final != expected_checksum:
+                self._log(
+                    f"Verification failed: expected checksum mismatch "
+                    f"(Expected: {expected_checksum[:16]}..., Got: {device_final[:16]}...)", "ERROR"
+                )
+                return False
+            
+            self._log("Verification passed!")
+            return True
                 
         except Exception as e:
             self._log(f"Verification error: {e}", "ERROR")

@@ -29,10 +29,12 @@ def open_file_dialog():
 
 flasher = SafeISOFlasher(verbose=False)
 iso_path = None
+iso_url = None
 selected_device = None
 flash_in_progress = False
 
 
+iso_url_textbox = None
 iso_path_label = None
 progress_bar = None
 status_label = None
@@ -60,18 +62,26 @@ def flash_thread():
     """Run the flash operation in a separate thread"""
     global flash_in_progress, iso_path, selected_device, flash_button, browse_button, device_dropdown, refresh_button
 
-    if iso_path and selected_device:
+    if selected_device:
         flash_in_progress = True
 
         flasher.set_status_callback(update_status)
         flasher.set_progress_callback(update_progress)
-        
+       
         GooeyButton_SetEnabled(refresh_button, False)
         GooeyButton_SetEnabled(browse_button, False)
         GooeyButton_SetEnabled(flash_button, False)
-
-        result = flasher.flash_iso(iso_path, selected_device)
-        
+        if iso_path:
+            result = flasher.flash_iso(iso_path, selected_device)
+        elif iso_url:
+            result = flasher.flash_iso_from_url(iso_url, selected_device)
+        else:
+            update_status("No ISO path or URL provided")
+            flash_in_progress = False
+            GooeyButton_SetEnabled(browse_button, True)
+            GooeyButton_SetEnabled(refresh_button, True)
+            GooeyButton_SetEnabled(flash_button, True)
+            return
         GooeyButton_SetEnabled(browse_button, True)
         GooeyButton_SetEnabled(refresh_button, True)
         GooeyButton_SetEnabled(flash_button, True)
@@ -84,10 +94,7 @@ def flash_thread():
 
         flash_in_progress = False
     else:
-        if not iso_path:
-            update_status("Please select an ISO file first")
-        elif not selected_device:
-            update_status("Please select a USB device first")
+        update_status("Please select a USB device first")
             
 
 @GooeyTextboxCallback
@@ -98,12 +105,13 @@ def textbox_placeholder_callback(text):
 def flash_callback() -> None:
     """Callback for the flash button"""
     global flash_in_progress, selected_device
-    
+    iso_url = GooeyTextbox_GetText(iso_url_textbox).strip()
+    print(f"ISO URL: {iso_url}")
     if flash_in_progress:
         update_status("Flash already in progress")
         return
-        
-    if not iso_path:
+
+    if not iso_path and not iso_url:
         update_status("Please select an ISO file first")
         return
         
@@ -281,7 +289,7 @@ def main():
     GooeyCanvas_DrawRectangle(textbox_bg, 0, 0, 540, 45,  0xFFFFFF, True, 1.0, False, 0.0)
     GooeyCanvas_DrawRectangle(textbox_bg, 0, 0, 540, 45,  0xBDBDBD, False, 1.0, True, 1.0)
     GooeyWindow_RegisterWidget(win, textbox_bg)
-    
+    global iso_url_textbox
     iso_url_textbox = GooeyTextBox_Create(30, 395, 500, 35, "Enter ISO URL (http:// or https://)", False, textbox_placeholder_callback)
     GooeyWindow_RegisterWidget(win, iso_url_textbox)
     
