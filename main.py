@@ -1,4 +1,4 @@
-from gooey_button import GooeyButton_Create, GooeyButtonCallback
+from gooey_button import *
 from libgooey import *
 from gooey_container import *
 from gooey_window import *
@@ -27,7 +27,7 @@ def open_file_dialog():
     return filepath
 
 
-flasher = ISOFlasherAPI(verbose=False)
+flasher = SafeISOFlasher(verbose=False)
 iso_path = None
 selected_device = None
 flash_in_progress = False
@@ -59,16 +59,23 @@ def update_progress(value, max_value=100):
 def flash_thread():
     """Run the flash operation in a separate thread"""
     global flash_in_progress, iso_path, selected_device, flash_button, browse_button, device_dropdown, refresh_button
-    
+
     if iso_path and selected_device:
         flash_in_progress = True
 
         flasher.set_status_callback(update_status)
         flasher.set_progress_callback(update_progress)
         
-        
+        GooeyButton_SetEnabled(refresh_button, False)
+        GooeyButton_SetEnabled(browse_button, False)
+        GooeyButton_SetEnabled(flash_button, False)
+
         result = flasher.flash_iso(iso_path, selected_device)
         
+        GooeyButton_SetEnabled(browse_button, True)
+        GooeyButton_SetEnabled(refresh_button, True)
+        GooeyButton_SetEnabled(flash_button, True)
+
         
         if result["success"]:
             update_status("Flash completed successfully!")
@@ -81,6 +88,11 @@ def flash_thread():
             update_status("Please select an ISO file first")
         elif not selected_device:
             update_status("Please select a USB device first")
+            
+
+@GooeyTextboxCallback
+def textbox_placeholder_callback(text):
+    pass
 
 @GooeyButtonCallback
 def flash_callback() -> None:
@@ -111,7 +123,7 @@ def browse_iso() -> None:
     
     filepath = open_file_dialog()
     if filepath:
-        
+
         if not filepath.lower().endswith('.iso'):
             update_status("Please select a valid ISO file")
             return
@@ -195,63 +207,108 @@ def main():
     
     Gooey_Init()
 
-    win = GooeyWindow_Create("PicoFlasher", 500, 420, True)
+    win = GooeyWindow_Create("PicoFlasher", 600, 650, True)
     GooeyWindow_MakeResizable(win, False)
 
     
-    topbar = GooeyCanvas_Create(0, 0, 500, 100, placeholder_callback)
-    GooeyCanvas_DrawRectangle(topbar, 0, 0, 500, 100, 0x2196F3, True, 1.0, False, 0.0)
-    content = GooeyCanvas_Create(0, 100, 500, 320, placeholder_callback)
-    GooeyCanvas_DrawRectangle(content, 0, 0, 500, 320, 0x121212, True, 1.0, False, 0.0)
-    GooeyWindow_RegisterWidget(win, topbar)
+    main_container = GooeyCanvas_Create(0, 0, 600, 650, placeholder_callback)
+    GooeyCanvas_DrawRectangle(main_container, 0, 0, 600, 650, 0xF5F5F5, True, 1.0, False, 0.0)
+    GooeyWindow_RegisterWidget(win, main_container)
+    
+    
+    header = GooeyCanvas_Create(10, 10, 580, 100, placeholder_callback)
+    GooeyCanvas_DrawRectangle(header, 0, 0, 580, 100,  0x2196F3, True, 1.0, False, 0.0)
+    GooeyCanvas_DrawRectangle(header, 0, 0, 580, 100,  0x1565C0, False, 1.0, True, 2.0)
+    GooeyWindow_RegisterWidget(win, header)
+
+    
+    content = GooeyCanvas_Create(10, 120, 580, 520, placeholder_callback)
+    GooeyCanvas_DrawRectangle(content, 0, 0, 580, 520,  0xFFFFFF, True, 1.0, False, 0.0)
+    GooeyCanvas_DrawRectangle(content, 0, 0, 580, 520,  0xE0E0E0, False, 1.0, True, 1.0)
     GooeyWindow_RegisterWidget(win, content)
 
+    
+    title = GooeyLabel_Create("PicoFlasher", 0.7, 35, 70)
+    GooeyLabel_SetColor(title, 0xFFFFFF)
+    
+    GooeyWindow_RegisterWidget(win, title)
 
-    logo = GooeyLabel_Create("PicoFlasher", 0.6, 30, 59)
-    GooeyLabel_SetColor(logo, 0xFFFFFF)
-    GooeyWindow_RegisterWidget(win, logo)
-
-    
-    made_by_label = GooeyLabel_Create("Crafted with Python & Gooey UI", 0.32, 240, 55)
-    GooeyLabel_SetColor(made_by_label, 0xFFFFFF)
-    GooeyWindow_RegisterWidget(win, made_by_label)
+    subtitle = GooeyLabel_Create("Simple. Straightforward.", 0.5, 300, 68)
+    GooeyLabel_SetColor(subtitle, 0xE3F2FD)
+    GooeyWindow_RegisterWidget(win, subtitle)
     
     
-    refresh_button = GooeyButton_Create("Refresh", 380, 120, 100, 30, refresh_callback)
+    device_section = GooeyCanvas_Create(20, 140, 560, 120, placeholder_callback)
+    GooeyCanvas_DrawRectangle(device_section, 0, 0, 560, 120,  0xF5F5F5, True, 1.0, False, 0.0)
+    GooeyCanvas_DrawRectangle(device_section, 0, 0, 560, 120,  0xE0E0E0, False, 1.0, True, 1.0)
+    GooeyWindow_RegisterWidget(win, device_section)
+    
+    device_label = GooeyLabel_Create("Select USB Device", 0.35, 30, 180)
+    GooeyLabel_SetColor(device_label, 0x424242)
+    
+    GooeyWindow_RegisterWidget(win, device_label)
+    
+    refresh_button = GooeyButton_Create("Refresh", 470, 200, 100, 35, refresh_callback)
     GooeyWindow_RegisterWidget(win, refresh_button)
     
-    
-    flash_label = GooeyLabel_Create("Select Drive", 0.36, 50, 160)
-    GooeyLabel_SetColor(flash_label, 0xFFFFFF)
-    GooeyWindow_RegisterWidget(win, flash_label)
-
-    
-    device_dropdown = GooeyDropdown_Create(50, 180, 400, 30, ["No device selected"], dropdown_callback)
+    device_dropdown = GooeyDropdown_Create(30, 200, 430, 35, ["No device selected"], dropdown_callback)
     GooeyWindow_RegisterWidget(win, device_dropdown)
     
     
-    flash_button = GooeyButton_Create("Flash", 340, 330, 100, 40, flash_callback)
-    GooeyWindow_RegisterWidget(win, flash_button)
-
+    iso_section = GooeyCanvas_Create(20, 270, 560, 180, placeholder_callback)
+    GooeyCanvas_DrawRectangle(iso_section, 0, 0, 560, 180,  0xF5F5F5, True, 1.0, False, 0.0)
+    GooeyCanvas_DrawRectangle(iso_section, 0, 0, 560, 180,  0xE0E0E0, False, 1.0, True, 1.0)
     
-    browse_button = GooeyButton_Create("Browse ISO", 50, 265, 100, 30, browse_iso)
+    iso_label = GooeyLabel_Create("Select ISO File", 0.35, 30, 300)
+    GooeyLabel_SetColor(iso_label, 0x424242)
+    
+    GooeyWindow_RegisterWidget(win, iso_label)
+    
+    browse_button = GooeyButton_Create("Browse ISO", 30, 315, 100, 35, browse_iso)
     GooeyWindow_RegisterWidget(win, browse_button)
-
     
-    iso_path_label = GooeyLabel_Create("No ISO Selected", 0.36, 50, 250)
-    GooeyLabel_SetColor(iso_path_label, 0xFFFFFF)
+    iso_path_label = GooeyLabel_Create("No ISO Selected", 140, 318, 16)
+    GooeyLabel_SetColor(iso_path_label, 0x616161)
     GooeyWindow_RegisterWidget(win, iso_path_label)
-
     
-    progress_bar = GooeyProgressBar_Create(50, 330, 250, 40, 0)
+    
+    url_label = GooeyLabel_Create("Or enter ISO URL:", 0.35, 30, 382)
+    GooeyLabel_SetColor(url_label, 0x616161)
+    GooeyWindow_RegisterWidget(win, url_label)
+    
+    
+    textbox_bg = GooeyCanvas_Create(30, 380, 540, 45, placeholder_callback)
+    GooeyCanvas_DrawRectangle(textbox_bg, 0, 0, 540, 45,  0xFFFFFF, True, 1.0, False, 0.0)
+    GooeyCanvas_DrawRectangle(textbox_bg, 0, 0, 540, 45,  0xBDBDBD, False, 1.0, True, 1.0)
+    GooeyWindow_RegisterWidget(win, textbox_bg)
+    
+    iso_url_textbox = GooeyTextBox_Create(30, 395, 500, 35, "Enter ISO URL (http:// or https://)", False, textbox_placeholder_callback)
+    GooeyWindow_RegisterWidget(win, iso_url_textbox)
+    
+    
+    action_section = GooeyCanvas_Create(20, 470, 560, 80, placeholder_callback)
+    GooeyCanvas_DrawRectangle(action_section, 0, 0, 560, 80,  0xF5F5F5, True, 1.0, False, 0.0)
+    GooeyCanvas_DrawRectangle(action_section, 0, 0, 560, 80,  0xE0E0E0, False, 1.0, True, 1.0)
+    GooeyWindow_RegisterWidget(win, action_section)
+    
+    progress_bar = GooeyProgressBar_Create(30, 485, 400, 40, 0)
     GooeyWindow_RegisterWidget(win, progress_bar)
     
+    flash_button = GooeyButton_Create("Flash", 450, 485, 100, 40, flash_callback)
+    GooeyWindow_RegisterWidget(win, flash_button)
     
-    status_label = GooeyLabel_Create("Ready. Click Refresh to find devices", 0.26, 50, 390)
-    GooeyLabel_SetColor(status_label, 0xFFFFFF)
+    
+    status_bg = GooeyCanvas_Create(10, 610, 580, 30, placeholder_callback)
+    GooeyCanvas_DrawRectangle(status_bg, 0, 0, 580, 30,  0xEEEEEE, True, 1.0, False, 0.0)
+    GooeyCanvas_DrawRectangle(status_bg, 0, 0, 580, 30, 0xBDBDBD, False, 1.0, True, 1.0)
+    GooeyWindow_RegisterWidget(win, status_bg)
+    
+    status_label = GooeyLabel_Create("Ready. Click Refresh to find devices", 0.3, 20, 630)
+    GooeyLabel_SetColor(status_label, 0x424242)
     GooeyWindow_RegisterWidget(win, status_label)
-    refresh_devices()
+    GooeyWindow_RegisterWidget(win, iso_section)
 
+    refresh_devices()
     
     GooeyWindow_Run(1, win)
     GooeyWindow_Cleanup(1, win)
